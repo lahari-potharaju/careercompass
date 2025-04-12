@@ -1,0 +1,485 @@
+---
+title: "CAREER COMPASS USING SUPERVISED MACHINE LEARNING"
+author: "Lahari Potharaju--Tanuja Neelapu--Nikhil Sairam Adari"
+date: "2025-02-12"
+output: word_document
+---
+
+#1. Motivation and Overview
+
+#Purpose
+#The purpose of the "Career Compass " project is to develop a predictive model that can forecast the likelihood of career advancement for professionals based on their years of experience and skill sets. This tool aims to assist individuals in understanding their career progression potential, enabling them to make informed decisions about career development and skill enhancement.
+
+#Context
+#In today's rapidly evolving job market, professionals across various industries seek to gain insights into their career trajectories. Understanding factors that contribute to career advancement can empower individuals to focus on actionable goals and improve their professional growth outcomes. This project is particularly relevant as it addresses the need for personalized career advice tailored to individual profiles, leveraging historical data and advanced analytics.
+
+#Objectives
+#The primary objectives of the "Career Compass " project are:
+
+#To Analyze Historical Data: Utilize existing datasets on professional development and career progression to identify key factors that have historically influenced career advancement.
+
+#To Develop Predictive Models: Implement machine learning algorithms that can predict the probability of career advancement based on identifiable metrics such as years of experience, industry sector, and professional skills.
+
+#To Provide Actionable Insights: Generate personalized reports for users that highlight strengths and areas for improvement, supporting them in strategic career planning.
+
+#To Enhance Career Planning Tools: Integrate the predictive model into a user-friendly application that can be accessed by professionals seeking to evaluate their career advancement opportunities.
+
+#By addressing these objectives, the project endeavors to bridge the gap between data-driven insights and career development strategies, providing a robust tool that contributes to effective career planning and management
+
+
+
+
+
+----------
+#Libraries Overview
+#shiny:
+
+#Purpose: Essential for building interactive web applications directly in R. It enables the creation of user interfaces and server logic, making it possible to build apps that users can interact with via a web browser.
+
+#Use in Project: In your project, shiny is used to structure the web application, define user inputs, and render outputs based on user interactions.
+#shinythemes:
+
+#Purpose: Provides additional themes for Shiny applications. These themes are based on Bootstrap, which is a popular HTML, CSS, and JS framework for developing responsive, mobile-first projects on the web.
+
+#Use in Project: Enhances the appearance of the Shiny app by allowing the application of pre-defined Bootstrap themes, improving user interface aesthetics without manual CSS.
+
+#randomForest:
+
+#Purpose: Implements the Random Forest algorithm for classification and regression, which is a powerful machine learning technique that builds multiple decision trees and merges them to get a more accurate and stable prediction.
+
+#Use in Project: Used to train predictive models from your data, likely to forecast outcomes such as career advancement probabilities based on features like years of experience and skill counts.
+
+#
+
+#dplyr:
+
+#Purpose: A grammar of data manipulation, providing a consistent set of verbs that help you solve the most common data manipulation challenges. It's particularly powerful for its readability and speed with data frames.
+
+#Use in Project: Facilitates data manipulation tasks such as filtering rows, selecting columns, reordering rows, and summarizing data, which are essential for preparing your dataset for analysis or viewing in the app.
+
+#ggplot2:
+
+#Purpose: Part of the tidyverse, and it's a system for declaratively creating graphics based on the grammar of graphics. You define the data, what variables map to aesthetics, what graphical primitives to use, and it takes care of the details.
+
+#Use in Project: Utilized to create advanced visualizations for data exploration and presentation within the app, such as histograms, scatter plots, and more complex multi-layered graphics.
+
+#DT:
+
+#Purpose: Provides an R interface to the DataTables JavaScript library that allows R users to create beautiful, interactive tables in web pages using the DataTables library.
+
+#Use in Project: Used to render interactive tables of data directly within the Shiny application, enhancing the user interaction experience by allowing sorting, filtering, and paging functionalities.
+
+#corrplot:
+
+#Purpose: A graphical display of a correlation matrix, confidence interval. It also contains some algorithms to do matrix reordering.
+
+#Use in Project: Useful for visualizing potential relationships between different variables in the dataset, often used in exploratory data analysis to identify variables that might influence each other.
+
+#plotly:
+
+#Purpose: Provides an interface to create interactive plots based on the Plotly.js library, enhancing the interactivity of visualizations.
+
+#Use in Project: Enables advanced interactive visualizations within the Shiny app, allowing users to hover, zoom, and filter through graphical data representations.
+
+```{r}
+library(shiny)
+library(shinythemes)
+library(randomForest)
+library(dplyr)
+library(ggplot2)
+library(DT)
+library(corrplot)
+library(plotly)
+library(readr)
+library(e1071)
+library(caret)
+```
+
+
+#The string "C:/Users/HP/OneDrive/Desktop/AdvancedR/Final_Project/linkedin.csv" specifies the location of a file on the file system. This string is a path that points to where the file linkedin.csv is stored:
+#/Users/HP/OneDrive/Desktop/: The home directory for the user "HP".
+#Desktop/: A directory on the desktop.
+#R-Project/: A subdirectory specifically for an R project.
+#linkedin.csv: The name of the file, likely containing data related to LinkedIn profiles or related information, stored in CSV (Comma Separated Values) format, which is a common data exchange format that stores tabular data (numbers and text) in plain text.
+
+
+```{r}
+linkedin_data <- read.csv("C:/Users/HP/OneDrive/Desktop/AdvancedR/Final_Project/linkedin.csv")
+head(linkedin_data)
+```
+#Data Inspection & Data Cleaning 
+```{r}
+# Check for missing values in each column
+sapply(linkedin_data, function(x) sum(is.na(x)))
+
+# Handling missing values
+linkedin_data <- na.omit(linkedin_data)
+
+# Display structure of the dataset
+str(linkedin_data)
+
+# Summary statistics for numerical columns
+summary(linkedin_data)
+
+```
+
+#Setting the Seed
+
+#This line sets the seed for R's random number generator, ensuring that the results of random operations, such as sampling or partitioning data, are reproducible. This is crucial for scientific computing where reproducibility of results is essential.
+
+#Using set.seed ensures that anyone running this code will get the exact same dataset and modeling results, provided all other conditions are constant.
+
+```{r}
+set.seed(123)
+```
+
+
+#Data Frame Creation
+
+#components:
+
+#total_years_experience: Generates 200 random numbers uniformly distributed between 0 and 20, and rounds them to the nearest whole number. This simulates the total years of experience of 200 individuals.
+
+#skills_count: Randomly samples 200 numbers from 0 to 50 with replacement, representing a count of skills individuals possess.
+
+#career_advance: Randomly generates a binary outcome (0 or 1) for 200 instances with a probability of 0.3 for 0 and 0.7 for 1, then converts these binary outcomes to a factor. This factor represents whether each individual has advanced in their career (1 indicating advancement).
+
+
+```{r}
+data <- data.frame(
+  total_years_experience = round(runif(200, min = 0, max = 20)),
+  skills_count = sample(0:50, 200, replace = TRUE),
+  career_advance = as.factor(sample(0:1, 200, replace = TRUE, prob = c(0.3, 0.7)))  # Adjusted probabilities
+)
+```
+
+# Split into Train/Test
+```{r}
+index <- sample(1:nrow(data), 0.7 * nrow(data))
+train_data <- data[index, ]
+test_data <- data[-index, ]
+```
+
+#Random Forest Model Training
+
+#randomForest(). This function is from the randomForest package, which implements the Random Forest algorithm for classification and regression tasks.
+
+#career_advance ~ total_years_experience + skills_count. This formula specifies that career_advance is the response variable, and it is predicted based on the predictors total_years_experience and skills_count.
+
+#Data: Specifies the dataset to use for model training, which is the data data frame created earlier.
+
+#Outcomes: The command trains a Random Forest model to predict career advancement based on the total years of experience and the number of skills. The model will build several decision trees from different samples of the data and average their predictions to improve accuracy and control over-fitting.
+
+#This script is a straightforward example of using simulated data to train a machine learning model. It shows how easily complex models can be trained in R and how synthetic data can be used for educational purposes, prototyping, or when actual data may not be available. The Random Forest model created here can then be used to make predictions or to evaluate the importance of each feature in predicting career advancement.
+
+```{r}
+# Random Forest
+rf_model <- randomForest(career_advance ~ ., data = train_data)
+rf_pred <- predict(rf_model, test_data)
+rf_acc <- mean(rf_pred == test_data$career_advance)
+```
+
+#Logistic Regression: 
+#Description:
+#glm() is a function in R used to fit generalized linear models.
+
+#family = "binomial" specifies that we’re performing binary classification, which makes it a logistic regression.
+
+#The formula career_advance ~ total_years_experience + skills_count defines the dependent variable (career_advance) and the independent predictors (total_years_experience, skills_count).
+
+#The model estimates the probability of career advancement and returns a logit score (log-odds), which is then transformed into a probability between 0 and 1.
+
+#Outcomes: The model is trained on the training data to predict the likelihood of career advancement.
+
+#A threshold (commonly 0.5) is applied to the predicted probability to determine if the model classifies a case as advancing or not.
+
+#This approach is interpretable and provides insights into how each feature influences the outcome through its coefficients.
+
+
+
+
+```{r}
+# Logistic Regression
+log_model <- glm(career_advance ~ ., data = train_data, family = "binomial")
+log_prob <- predict(log_model, test_data, type = "response")
+log_pred <- factor(ifelse(log_prob > 0.5, 1, 0), levels = levels(test_data$career_advance))
+log_acc <- mean(log_pred == test_data$career_advance)
+```
+
+#SVM
+#Description:
+#svm() is a function from the e1071 package that fits a Support Vector Machine model.
+
+#The formula career_advance ~ total_years_experience + skills_count specifies the response and predictors.
+
+#kernel = "linear" defines the type of SVM kernel used. You can also experiment with "radial", "polynomial", or "sigmoid" for nonlinear relationships.
+
+#The model attempts to find the optimal hyperplane that separates the two classes (career advancement: 0 or 1) by maximizing the margin between support vectors.
+
+#Outcomes:The model is trained to classify whether a person is likely to advance in their career.
+
+#Predictions are made using the test set, and accuracy is calculated by comparing the predictions with actual labels.
+
+#SVM is particularly effective in high-dimensional spaces and when the decision boundary is not clearly linear.
+
+```{r}
+# SVM
+svm_model <- svm(career_advance ~ ., data = train_data, kernel = "linear")
+svm_pred <- predict(svm_model, test_data)
+svm_acc <- mean(svm_pred == test_data$career_advance)
+
+```
+
+#F1_Score
+
+```{r}
+tabPanel("Model Comparison", verbatimTextOutput("modelAccuracy"))
+library("MLmetrics")
+f1_rf <- F1_Score(y_pred = rf_pred, y_true = test_data$career_advance, positive = "1")
+f1_log <- F1_Score(y_pred = log_pred, y_true = test_data$career_advance, positive = "1")
+f1_svm <- F1_Score(y_pred = svm_pred, y_true = test_data$career_advance, positive = "1")
+f1_rf
+f1_log
+f1_svm
+```
+
+#Output model comparison:
+
+```{r}
+# Step 5: Output model comparison
+server <- function(input, output) {
+
+  output$modelAccuracy <- renderPrint({
+    cat("Model Accuracy Comparison:\n")
+    cat("Random Forest:       ", round(rf_acc * 100, 2), "%\n")
+    cat("Logistic Regression: ", round(log_acc * 100, 2), "%\n")
+    cat("SVM:                 ", round(svm_acc * 100, 2), "%\n")
+  })
+  
+}
+```
+#Conclusion – Model Comparison
+
+#Logistic Regression and SVM outperformed Random Forest with an accuracy and F1 score of 80%, compared to 73.6% for Random Forest. Given its simplicity and strong performance, Logistic Regression was selected for deployment.
+
+
+
+# Shiny UI code defines a multi-tabbed application using navbarPage, which is styled with the flatly theme from the shinythemes package. The app features three main tabs: "Home", "Predict", and "About". Each tab is designed to serve a different function and collect different types of user input or display information. Here’s a detailed explanation of each component and tab:
+
+#navbarPage Configuration
+#Theme: The theme shinytheme("flatly") applies a predefined Bootstrap theme to the app for a modern and flat appearance.
+#Title: "Career Compass" is set as the title of the navigation bar.
+
+#"Home" Tab
+#Well Panel: Contains a welcoming message and an icon. The wellPanel provides a simple way to group content with a slightly inset frame.
+#User Details Form:
+#Name: A textInput to input the user's name with a placeholder indicating where to enter the name.
+#Age: A numericInput for the user's age, allowing values from 18 to 100.
+#Education Level: A selectInput for choosing the highest level of education, with options ranging from high school to PhD.
+#Industry: Another selectInput to choose the industry where the user is employed, with several options including "Technology", "Finance", and others.
+#Submit Button: An actionButton equipped with an icon, used to submit the form. Upon clicking, it should trigger server-side actions (handled in the server logic, not shown here).
+#Confirmation Message: A textOutput to display messages back to the user after form submission.
+
+#"Predict" Tab
+
+#Sidebar Layout:
+#Sidebar Panel:
+#Total Years of Experience: A sliderInput to select the number of years of experience.
+#Number of Skills: A sliderInput to select the count of skills the user has.
+#Predict Button: An actionButton to initiate the prediction. It uses an icon for visual enhancement.
+#Feature Selection: A selectInput to choose which feature to plot. This affects the output in the Feature Plot tab panel.
+
+
+#Main Panel:
+#Tabbed Panels: Contains multiple panels to display the prediction result, a feature plot, a data table, statistical summaries, a correlation plot, and feature importance. Each of these components provides different insights and visualizations based on user input and predictive analytics.
+
+#"About" Tab
+#Well Panel: Provides a brief description of the app's purpose and the underlying model.
+#Feedback Form:
+#Name: A textInput for entering the user's name.
+#Feedback Content: A textAreaInput for detailed feedback, allowing multiline text input.
+#Submit Feedback Button: An actionButton that users click to submit their feedback, styled with a success button class for visual emphasis.
+#Feedback Confirmation: A textOutput for displaying a confirmation message upon feedback submission.
+```{r}
+ui <- navbarPage(
+  theme = shinytheme("flatly"),
+  title = "Career Compass",
+
+  tabPanel("Home",
+           fluidPage(
+             wellPanel(
+               h3("Welcome to the Career Compass", icon("home")),
+               p("Please fill out the form below to get started.")
+             ),
+             div(
+               class = "well",
+               h4("Your Details", icon("user")),
+               textInput("name", "Name", placeholder = "Enter your full name here"),
+               numericInput("age", "Age", value = NA, min = 18, max = 100, step = 1),
+               selectInput("education", "Highest Level of Education", 
+                           choices = c("High School" = "high_school",
+                                       "Bachelor's" = "bachelors",
+                                       "Master's" = "masters",
+                                       "PhD" = "phd"),
+                           selected = "bachelors"),
+               selectInput("industry", "Industry",
+                           choices = c("Technology" = "technology",
+                                       "Finance" = "finance",
+                                       "Healthcare" = "healthcare",
+                                       "Education" = "education",
+                                       "Manufacturing" = "manufacturing",
+                                       "HR" = "hr"),
+                           selected = "technology"),
+               actionButton("submit", "Submit", icon("paper-plane"), class = "btn-primary"),
+               tags$br(),
+               tags$br(),
+               textOutput("confirmationMessage")
+             )
+           )
+  ),
+
+  tabPanel("Predict",
+           sidebarLayout(
+             sidebarPanel(
+               sliderInput("yearsExperience", "Total Years of Experience:", min = 0, max = 20, value = 10),
+               sliderInput("skillsCount", "Number of Skills:", min = 0, max = 50, value = 25),
+               actionButton("predict", "Predict Career Advancement", icon("chart-line")),
+               selectInput("selectFeature", "Select Feature to Plot:",
+                           choices = c("Total Years of Experience" = "total_years_experience",
+                                       "Skills Count" = "skills_count"),
+                           selected = "total_years_experience")
+             ),
+             mainPanel(
+               tabsetPanel(type = "tabs",
+                           tabPanel("Prediction Result", textOutput("result")),
+                           tabPanel("Feature Plot", plotOutput("featurePlot")),
+                           tabPanel("Data Table", DTOutput("dataTable")),
+                           tabPanel("Statistical Summary", verbatimTextOutput("summaryStats")),
+                           tabPanel("Correlation Plot", plotOutput("corPlot"))
+               )
+             )
+           )
+  ),
+
+  tabPanel("About",
+           fluidPage(
+             wellPanel("This app uses a Logistic Regression model to predict career advancement based on years of experience and number of skills.")
+           )
+  )
+)
+
+server <- function(input, output) {
+  # Sample data creation
+  set.seed(123)
+  data <- data.frame(
+    total_years_experience = round(runif(200, 0, 20)),
+    skills_count = sample(0:50, 200, replace = TRUE),
+    career_advance = as.factor(sample(0:1, 200, replace = TRUE, prob = c(0.3, 0.7)))
+  )
+
+  # Logistic regression model
+  log_model <- glm(career_advance ~ ., data = data, family = "binomial")
+
+  observeEvent(input$predict, {
+    new_data <- data.frame(
+      total_years_experience = input$yearsExperience,
+      skills_count = input$skillsCount
+    )
+    pred_prob <- predict(log_model, new_data, type = "response")
+    pred_class <- ifelse(pred_prob > 0.5, "Prediction: Likely to advance in career", "Prediction: Unlikely to advance in career")
+
+    output$result <- renderText({
+      paste0(pred_class, " (Confidence: ", round(pred_prob * 100, 1), "%)")
+    })
+  })
+
+  output$featurePlot <- renderPlot({
+    req(input$selectFeature)
+    selected_data <- data.frame(x = data[[input$selectFeature]], fill = data$career_advance)
+    ggplot(selected_data, aes(x = x, fill = fill)) +
+      geom_histogram(position = "identity", alpha = 0.5, bins = 30) +
+      labs(x = input$selectFeature, fill = "Career Advancement") +
+      theme_minimal()
+  })
+
+  output$dataTable <- renderDT({
+    datatable(data, options = list(pageLength = 10), filter = 'top')
+  })
+
+  output$summaryStats <- renderPrint({
+    summary(data)
+  })
+
+  output$corPlot <- renderPlot({
+    corr_data <- data[, sapply(data, is.numeric)]
+    corr_mat <- cor(corr_data)
+    corrplot(corr_mat, method = "circle")
+  })
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+
+#The shinyApp(ui = ui, server = server) function call is used to create and launch a Shiny application in R. This function connects the user interface (UI) and server logic, which are essential components of any Shiny app. Let's break down what each part means and how they work together:
+
+#Components of the shinyApp Function
+#ui: This argument specifies the User Interface of your Shiny application. It defines how the app looks and how users interact with it. The UI is created using various Shiny functions that generate HTML content, which can include input widgets (like sliders, text boxes, buttons), output displays (like plots, tables, text), and layout directives (like panels or tabs).
+
+#server: This argument represents the server logic or the backend of the Shiny application. It is a function that takes three parameters: input, output, and optionally session. The server function manages the app's reactivity by reading inputs from the UI, processing that data with R, and then sending the results back to the UI. This can involve calculations, transformations, calling APIs, querying databases, generating plots, and more.
+
+#Explanation of shinyApp(ui, server)
+#Integration: The shinyApp function integrates the UI and server components. It ensures that inputs from the UI are appropriately passed to the server, and that outputs from the server are displayed back on the UI.
+
+#Reactivity: One of the core features of Shiny is its reactivity system. Inputs from the UI are monitored by the server, and any changes trigger reactive expressions in the server logic. These changes then update the outputs, which are sent back to the UI to update the display.
+
+#Launching the App: When shinyApp(ui, server) is called, it launches the Shiny application. If this line is run in an R script or directly in an R console, it starts the Shiny server and opens the application in a web browser. Shiny apps can also be hosted on servers (like ShinyApps.io or a Shiny Server) to be accessible over the internet.
+
+#Development and Debugging: During development, shinyApp() is often used to run the application locally for testing and debugging. Developers can see the effects of their code changes in real-time by refreshing the app.
+
+#Narative
+
+#Here is a narrative description of the Shiny application titled "Career Compass ." This narrative explains the purpose, functionality, and structure of the application, offering insights into how users can interact with it and what they can expect in terms of features and outputs.
+
+#Overview
+#The "Career Compass " is a dynamic web application built using R's Shiny framework, designed to help professionals assess their potential for career advancement based on specific career metrics. The app leverages a Random Forest machine learning model to predict the likelihood of career advancement by considering factors such as years of experience and skill count.
+
+#User Interface
+#The application features a user-friendly interface divided into three main tabs: Home, Predict, and About. Each tab is designed to serve specific functions:
+
+#Home Tab
+#Purpose: Serves as the welcoming point and collects user demographic and professional details.
+#Features:
+#A greeting message encourages users to interact with the app.
+#A form collects user details including name, age, highest level of education, and industry. These details are believed to contextualize the user's experience and expectations from the app.
+#A "Submit" button, adorned with a paper-plane icon, captures the input data. Upon submission, the app acknowledges the received data with a confirmation message.
+#Predict Tab
+#Purpose: Allows users to input data relevant to the predictive model and view the results and related analytical visuals.
+#Features:
+#Input sliders let users specify their total years of experience and the number of skills they possess.
+#A "Predict" button initiates the prediction process. It uses an icon of a chart line, symbolizing the analytical nature of the action.
+#Multiple panels display different types of outputs:
+#Prediction Result: Shows whether the user is likely to advance in their career based on the input.
+#Feature Plot: Visualizes the distribution of selected features with respect to career advancement.
+#Data Table: Provides a tabular view of the input data.
+#Statistical Summary: Offers a quick statistical overview of the dataset.
+#Correlation Plot: Displays correlations between numeric features to uncover any significant relationships.
+#Feature Importance: Illustrates the importance of each feature in the predictive model, helping users understand what factors most influence the prediction.
+#About Tab
+#Purpose: Gives an overview of the app’s functionality and the model it uses. Also, it includes a feedback form to gather user impressions and suggestions.
+#Features:
+#An explanatory note details the purpose of the app and the underlying Random Forest model.
+#A feedback form allows users to submit their name and feedback. This section aims to engage users and collect valuable insights for future improvements.
+#Submission of feedback is confirmed through a friendly message, enhancing user interaction and satisfaction.
+#Server Logic
+#The server component of the app is crucial for processing all interactions. It responds to user inputs like submissions on the "Home" tab and predictions on the "Predict" tab. This includes data processing, running the machine learning model, and generating results and plots based on user inputs.
+#User Experience
+#Users of the "Career Compass " can expect a straightforward, engaging experience with clear instructions and instant feedback. The app not only provides predictive insights but also educational visuals that help users understand the underlying data and model logic. The feedback mechanism ensures that users can communicate their experiences and suggestions directly to the developers.
+
+
+#Conclusion
+
+#This Shiny application exemplifies how complex data-driven predictions can be made accessible and interactive through a well-designed web interface. It is intended for professionals looking to gain insights into their career progression possibilities and for HR departments to better understand factors influencing career advancements within their organizations.
+
+#This app provides an intuitive interface for predicting career advancement. It accepts user inputs, performs real-time predictions, and displays visual insights using Logistic Regression. Basic data cleaning ensures reliable results.
+
