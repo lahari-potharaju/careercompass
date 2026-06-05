@@ -51,8 +51,6 @@ careercompass/
 
 Training data: 200 synthetic career profiles (balanced: 100 advance / 100 do not advance).
 
-## Authors
+## Author
 
-- Lahari Potharaju
-- Tanuja Neelapu
-- Nikhil Sairam Adari
+Lahari Potharaju
