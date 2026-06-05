@@ -6,6 +6,9 @@
 # R temporary files
 *.Rproj.user/
 
+# Shiny deployment config (contains private account credentials)
+rsconnect/
+
 # OS
 .DS_Store
 Thumbs.db
