@@ -1,0 +1,11 @@
+# R session artifacts
+.RData
+.Rhistory
+*.Rhistory
+
+# R temporary files
+*.Rproj.user/
+
+# OS
+.DS_Store
+Thumbs.db

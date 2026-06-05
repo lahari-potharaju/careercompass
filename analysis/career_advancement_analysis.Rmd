@@ -104,7 +104,7 @@ library(caret)
 
 
 ```{r}
-linkedin_data <- read.csv("C:/Users/HP/OneDrive/Desktop/AdvancedR/Final_Project/linkedin.csv")
+linkedin_data <- read.csv("../data/career_profiles.csv")
 head(linkedin_data)
 ```
 #Data Inspection & Data Cleaning 
